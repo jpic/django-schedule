@@ -5,13 +5,8 @@
 {% include "schedule/_dialogs.html" %}
 <div class="tablewrapper">
   <div class="calendarname">{{ calendar.name }}</div>
-  {% prevnext "month_calendar" calendar.slug periods.month "F Y"%}
-  <div class="now">
-    <a href="{% url month_calendar calendar.slug %}">
-      This month
-    </a>
-  </div>
-  {% month_table calendar periods.month "regular" %}
+  <div id="calendar"></div>
+
 </div>
 <div class="navigation">
   <a href="{% url tri_month_calendar calendar.slug %}{% querystring_for_date periods.month.start 2 %}">
@@ -21,4 +16,42 @@
     Full Year Calendar
   </a>
 </div>
+{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/fullcalendar.css" />
+{% endblock %}
+
+{% block extra_body %}
+{{ block.super }}
+<script type="text/javascript" src="http://jqueryui.com/latest/ui/ui.draggable.js"></script>
+<script type="text/javascript" src="http://jqueryui.com/latest/ui/ui.droppable.js"></script>
+<script type="text/javascript" src="http://jqueryui.com/latest/ui/ui.resizable.js"></script>
+<script type="text/javascript" src="{{ MEDIA_URL }}js/fullcalendar.min.js"></script>
+
+<script type="text/javascript">
+$('#calendar').fullCalendar({
+    editable: true,
+    events:[
+    {% for event in calendar.events %}
+            {
+                id: {{ event.pk }},
+                title: "{{ event.title }}",
+                start: new Date({{ event.start.year }}, {{ event.start.month }}, {{ event.start.day }}, {{ event.start.hour }}, {{ event.start.minute }}, {{ event.start.second }}),
+                end: new Date({{ event.end.year }}, {{ event.end.month }}, {{ event.end.day }}, {{ event.end.hour }}, {{ event.end.minute }}, {{ event.end.second }}),
+                allDay: false
+            }, 
+    {% endfor %}
+    ],
+    eventDrop: function (calEvent, dayDelta, minuteDelta, revertFunc, jsEvent, ui, view) {
+        var url = "{% url ajax_event %}";
+        var data = {
+            pk: calEvent.id,
+            day_delta: dayDelta,
+            minute_delta: minuteDelta
+        }
+        $.post(url, data);
+    }
+});
+</script>
 {% endblock %}

@@ -65,6 +65,9 @@ url(r'^event/(?P<event_id>\d+)/$',
 url(r'^event/delete/(?P<event_id>\d+)/$',
     'schedule.views.delete_event',
     name="delete_event"),
+url(r'^event/ajax/$',
+    'schedule.views.ajax_event',
+    name="ajax_event"), 
 
 #urls for already persisted occurrences
 url(r'^occurrence/(?P<event_id>\d+)/(?P<occurrence_id>\d+)/$',

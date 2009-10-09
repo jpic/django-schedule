@@ -1,7 +1,7 @@
 from urllib import quote
 from django.shortcuts import render_to_response, get_object_or_404
 from django.views.generic.create_update import delete_object
-from django.http import HttpResponseRedirect, Http404, HttpResponse
+from django.http import HttpResponseRedirect, Http404, HttpResponse, HttpResponseForbidden
 from django.template import RequestContext
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
@@ -110,6 +110,57 @@ def event(request, event_id, template_name="schedule/event.html"):
         "event": event,
         "back_url" : back_url,
     }, context_instance=RequestContext(request))
+
+def ajax_event(request,
+               model_class=Event,
+               start_date_attribute='start',
+               end_date_attribute='end'):
+    """
+    This is not a view but is placed here for django MVT design. It is used to
+    update an event using the POST request generated on drop by either
+    fullcalendar or jMonthCalendar.
+
+    model_class
+        This is the model class that should be used. All it needs is a pk, a
+        start_date_attribute and may have an end_date_attribute which would
+        also be updated if model_class has it.
+
+    start_date_attribute
+        This is the name of the start date attribute of model_class. It is set
+        to 'start' by default to be useable with the default Event model class
+        provided by django-schedule.
+
+    end_date_attribute
+        This is the name of the optionnal end date attribute of model_class. It
+        is set to 'end' by default to be useable with the default Event model
+        class.
+    """
+    if request.method != 'POST':
+        return HttpResponseForbidden('POST is the only accepted method')
+
+    model = get_object_or_404(model_class, pk=int(request.POST.get('pk', False)))
+
+    # fullcalendar support
+    if 'day_delta' in request.POST or 'minute_delta' in request.POST:
+        seconds = 0
+        if 'day_delta' in request.POST:
+            seconds += int(request.POST.get('day_delta')) * 24 * 3600
+        if 'minute_delta' in request.POST:
+            seconds += int(request.POST.get('minute_delta')) * 60
+        
+        if seconds:
+            start = getattr(model, start_date_attribute)
+            start += datetime.timedelta(seconds=seconds)
+            setattr(model, start_date_attribute, start)
+
+            if end_date_attribute: # end_date_attribute is optionnal
+                end = getattr(model, end_date_attribute)
+                end += datetime.timedelta(seconds=seconds)
+                setattr(model, end_date_attribute, end)
+
+            model.save()
+
+    return HttpResponse("ok")
 
 def occurrence(request, event_id,
     template_name="schedule/occurrence.html", *args, **kwargs):
